@@ -1,0 +1,185 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Social Video Formatter - Basic Control</title>
+  <style>
+    body { font-family: Consolas, monospace; max-width: 900px; margin: 20px auto; line-height: 1.4; }
+    input, textarea, button { font-family: Consolas, monospace; width: 100%; margin: 4px 0; padding: 8px; }
+    .row { margin-bottom: 14px; }
+    pre { background: #f3f3f3; padding: 10px; overflow: auto; }
+    .grid { display: grid; grid-template-columns: 1fr; gap: 6px; }
+  </style>
+</head>
+<body>
+  <h2>Social Video Formatter (V1) - Text Control</h2>
+
+  <div class="row">
+    <h3>Setup Form (Easy)</h3>
+    <div class="grid">
+      <input id="GOOGLE_CLIENT_ID" placeholder="GOOGLE_CLIENT_ID" />
+      <input id="GOOGLE_CLIENT_SECRET" placeholder="GOOGLE_CLIENT_SECRET" />
+      <input id="GOOGLE_REFRESH_TOKEN" placeholder="GOOGLE_REFRESH_TOKEN" />
+      <input id="GOOGLE_DRIVE_INPUT_FOLDER_ID" value="1EDfPClIpdCMsJPk1bl_3RS357eroCH1b" placeholder="GOOGLE_DRIVE_INPUT_FOLDER_ID" />
+      <input id="GOOGLE_DRIVE_ORIGINALS_FOLDER_ID" placeholder="GOOGLE_DRIVE_ORIGINALS_FOLDER_ID" />
+      <input id="GOOGLE_DRIVE_PROCESSED_FOLDER_ID" placeholder="GOOGLE_DRIVE_PROCESSED_FOLDER_ID" />
+      <input id="GOOGLE_DRIVE_THUMBNAILS_FOLDER_ID" placeholder="GOOGLE_DRIVE_THUMBNAILS_FOLDER_ID" />
+      <input id="GOOGLE_DRIVE_CAPTIONS_FOLDER_ID" placeholder="GOOGLE_DRIVE_CAPTIONS_FOLDER_ID" />
+      <input id="GOOGLE_DRIVE_MANIFESTS_FOLDER_ID" placeholder="GOOGLE_DRIVE_MANIFESTS_FOLDER_ID" />
+      <input id="GOOGLE_DRIVE_FAILED_FOLDER_ID" placeholder="GOOGLE_DRIVE_FAILED_FOLDER_ID" />
+      <input id="GOOGLE_DRIVE_NEEDS_REVIEW_FOLDER_ID" placeholder="GOOGLE_DRIVE_NEEDS_REVIEW_FOLDER_ID" />
+      <input id="APP_API_KEY" value="change-me" placeholder="APP_API_KEY" />
+    </div>
+    <button onclick="loadConfig()">Load Current Values</button>
+    <button onclick="saveConfig()">Save Values to .env</button>
+
+    <label>Google OAuth Code (after you approve access)</label>
+    <input id="oauthCode" placeholder="Paste Google code here" />
+    <button onclick="startGoogleAuth()">Start Google Auth (Get Link)</button>
+    <button onclick="exchangeGoogleCode()">Exchange Code and Save Refresh Token</button>
+    <button onclick="testGoogleConnection()">Test Google Drive Connection</button>
+  </div>
+
+  <div class="row">
+    <label>API Key</label>
+    <input id="apiKey" value="change-me" placeholder="APP_API_KEY from .env" />
+  </div>
+
+  <div class="row">
+    <button onclick="health()">GET /health</button>
+  </div>
+
+  <div class="row">
+    <label>Create Job - Drive File ID</label>
+    <input id="fileId" value="1yyd5uDCA6bUaQXWGOgyKQfAXH4THFPmE" placeholder="example: 1AbC..." />
+    <label>Platforms (comma-separated)</label>
+    <input id="platforms" value="Instagram,TikTok,YouTube Shorts,YouTube,LinkedIn,X,Google Business Profile" />
+    <label>Subtitle Mode</label>
+    <input id="subtitleMode" value="auto" />
+    <label>Webhook URL (optional)</label>
+    <input id="webhookUrl" placeholder="https://..." />
+    <button onclick="createJob()">POST /jobs</button>
+  </div>
+
+  <div class="row">
+    <button onclick="listJobs()">GET /jobs</button>
+  </div>
+
+  <div class="row">
+    <label>Job ID</label>
+    <input id="jobId" placeholder="paste job id" />
+    <button onclick="getJob()">GET /jobs/{job_id}</button>
+    <button onclick="getOutputs()">GET /jobs/{job_id}/outputs</button>
+    <button onclick="retryJob()">POST /jobs/{job_id}/retry</button>
+  </div>
+
+  <div class="row">
+    <button onclick="listPresets()">GET /presets</button>
+  </div>
+
+  <h3>Response</h3>
+  <pre id="out">Ready.</pre>
+
+<script>
+const configKeys = [
+  'GOOGLE_CLIENT_ID','GOOGLE_CLIENT_SECRET','GOOGLE_REFRESH_TOKEN','GOOGLE_DRIVE_INPUT_FOLDER_ID',
+  'GOOGLE_DRIVE_ORIGINALS_FOLDER_ID','GOOGLE_DRIVE_PROCESSED_FOLDER_ID','GOOGLE_DRIVE_THUMBNAILS_FOLDER_ID',
+  'GOOGLE_DRIVE_CAPTIONS_FOLDER_ID','GOOGLE_DRIVE_MANIFESTS_FOLDER_ID','GOOGLE_DRIVE_FAILED_FOLDER_ID',
+  'GOOGLE_DRIVE_NEEDS_REVIEW_FOLDER_ID','APP_API_KEY'
+];
+
+function headers() {
+  const key = document.getElementById('apiKey').value.trim();
+  return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key };
+}
+
+async function show(resp) {
+  let text = await resp.text();
+  try { text = JSON.stringify(JSON.parse(text), null, 2); } catch {}
+  document.getElementById('out').textContent = 'HTTP ' + resp.status + '\n' + text;
+}
+
+async function loadConfig() {
+  const resp = await fetch('/config/env');
+  const data = await resp.json();
+  configKeys.forEach(k => { if (document.getElementById(k)) document.getElementById(k).value = data[k] || ''; });
+  if (data.APP_API_KEY) document.getElementById('apiKey').value = data.APP_API_KEY;
+  document.getElementById('out').textContent = 'Loaded values from .env';
+}
+
+async function saveConfig() {
+  const payload = {};
+  configKeys.forEach(k => payload[k] = (document.getElementById(k)?.value || '').trim());
+  const resp = await fetch('/config/env', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+  await show(resp);
+  if (payload.APP_API_KEY) document.getElementById('apiKey').value = payload.APP_API_KEY;
+}
+
+async function startGoogleAuth() {
+  const payload = {
+    GOOGLE_CLIENT_ID: (document.getElementById('GOOGLE_CLIENT_ID').value || '').trim()
+  };
+  const resp = await fetch('/oauth/google/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+  const data = await resp.json();
+  if (resp.ok && data.auth_url) {
+    window.open(data.auth_url, '_blank');
+  }
+  document.getElementById('out').textContent = JSON.stringify(data, null, 2);
+}
+
+async function exchangeGoogleCode() {
+  const payload = {
+    code: (document.getElementById('oauthCode').value || '').trim(),
+    GOOGLE_CLIENT_ID: (document.getElementById('GOOGLE_CLIENT_ID').value || '').trim(),
+    GOOGLE_CLIENT_SECRET: (document.getElementById('GOOGLE_CLIENT_SECRET').value || '').trim()
+  };
+  const resp = await fetch('/oauth/google/exchange', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+  await show(resp);
+  if (resp.ok) {
+    await loadConfig();
+  }
+}
+
+async function testGoogleConnection() {
+  const payload = {
+    GOOGLE_CLIENT_ID: (document.getElementById('GOOGLE_CLIENT_ID').value || '').trim(),
+    GOOGLE_CLIENT_SECRET: (document.getElementById('GOOGLE_CLIENT_SECRET').value || '').trim(),
+    GOOGLE_REFRESH_TOKEN: (document.getElementById('GOOGLE_REFRESH_TOKEN').value || '').trim(),
+    GOOGLE_DRIVE_INPUT_FOLDER_ID: (document.getElementById('GOOGLE_DRIVE_INPUT_FOLDER_ID').value || '').trim()
+  };
+  const resp = await fetch('/oauth/google/test', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+  await show(resp);
+}
+
+async function health() { await show(await fetch('/health')); }
+async function createJob() {
+  const key = document.getElementById('apiKey').value.trim();
+  const fileId = document.getElementById('fileId').value.trim();
+  if (!key) { document.getElementById('out').textContent = 'Please enter API Key first.'; return; }
+  if (!fileId) { document.getElementById('out').textContent = 'Please enter Drive File ID first.'; return; }
+  const platforms = document.getElementById('platforms').value.split(',').map(x => x.trim()).filter(Boolean);
+  const body = {
+    drive_file_id: fileId,
+    platforms,
+    subtitle_mode: document.getElementById('subtitleMode').value.trim() || 'auto',
+    webhook_url: document.getElementById('webhookUrl').value.trim() || null
+  };
+  await show(await fetch('/jobs', { method: 'POST', headers: headers(), body: JSON.stringify(body) }));
+}
+async function listJobs() { await show(await fetch('/jobs', { headers: headers() })); }
+async function getJob() {
+  const id = document.getElementById('jobId').value.trim();
+  await show(await fetch('/jobs/' + id, { headers: headers() }));
+}
+async function getOutputs() {
+  const id = document.getElementById('jobId').value.trim();
+  await show(await fetch('/jobs/' + id + '/outputs', { headers: headers() }));
+}
+async function retryJob() {
+  const id = document.getElementById('jobId').value.trim();
+  await show(await fetch('/jobs/' + id + '/retry', { method: 'POST', headers: headers() }));
+}
+async function listPresets() { await show(await fetch('/presets', { headers: headers() })); }
+</script>
+</body>
+</html>

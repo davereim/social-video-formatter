@@ -1,0 +1,14 @@
+# Deploy API service
+# gcloud run deploy social-video-formatter-api \
+#   --image gcr.io/$PROJECT_ID/social-video-formatter:latest \
+#   --region us-central1 \
+#   --platform managed \
+#   --allow-unauthenticated
+
+# Deploy Cloud Run Job worker
+# gcloud run jobs deploy social-video-formatter-job \
+#   --image gcr.io/$PROJECT_ID/social-video-formatter:latest \
+#   --region us-central1 \
+#   --command python \
+#   --args -m,social_video_formatter.workers.cloud_run_job \
+#   --set-env-vars GCP_PROJECT_ID=$PROJECT_ID

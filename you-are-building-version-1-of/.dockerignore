@@ -1,0 +1,24 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Venv
+.venv/
+
+# Local runtime data
+.env
+social_video_formatter.db
+data/
+
+# Git
+.git/
+.gitignore
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

@@ -1,0 +1,11 @@
+{
+  "font": "Arial Bold",
+  "font_size": 44,
+  "font_color": "white",
+  "outline_color": "black",
+  "outline_width": 2,
+  "max_lines": 2,
+  "position": "lower_third",
+  "background_box": false,
+  "logo_enabled": false
+}

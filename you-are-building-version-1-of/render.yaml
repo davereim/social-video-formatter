@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: social-video-formatter-api
+    env: docker
+    plan: starter
+    autoDeploy: true
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        value: sqlite:///./social_video_formatter.db
+      - key: LOCAL_STORAGE_PATH
+        value: ./data
+      - key: WATCH_SCAN_INTERVAL_SECONDS
+        value: 30
+      - key: SUBTITLE_MODE
+        value: auto
+      - key: GBP_TRIM_MODE
+        value: first_30_seconds
+      - key: CROP_ANCHOR
+        value: center
+      - key: APP_API_KEY
+        sync: false
+      - key: DEFAULT_WEBHOOK_URL
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REFRESH_TOKEN
+        sync: false
