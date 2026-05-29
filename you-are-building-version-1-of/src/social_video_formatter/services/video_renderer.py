@@ -46,8 +46,8 @@ class VideoRenderer:
             cmd += ["-t", str(max_duration)]
         cmd += [
             "-vf", vf,
-            "-c:v", "libx264", "-crf", "23", "-preset", "medium",
-            "-c:a", "aac", "-b:a", "128k",
+            "-c:v", "libx264", "-crf", "23", "-preset", "fast", "-threads", "0",
+            "-c:a", "aac", "-b:a", "96k",
             "-movflags", "+faststart",
             str(output),
         ]
@@ -75,8 +75,8 @@ class VideoRenderer:
             cmd += ["-t", str(max_duration)]
         cmd += [
             "-vf", vf,
-            "-c:v", "libx264", "-b:v", f"{video_bitrate_k}k", "-preset", "medium",
-            "-c:a", "aac", "-b:a", "128k",
+            "-c:v", "libx264", "-b:v", f"{video_bitrate_k}k", "-preset", "fast", "-threads", "0",
+            "-c:a", "aac", "-b:a", "96k",
             "-movflags", "+faststart",
             str(output),
         ]
