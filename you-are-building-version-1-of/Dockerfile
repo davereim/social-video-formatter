@@ -20,6 +20,6 @@ RUN pip install --upgrade pip && pip install .
 
 RUN mkdir -p /app/data
 
-EXPOSE 8000
+EXPOSE 8080
 
-CMD ["python", "-m", "uvicorn", "social_video_formatter.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "python -m uvicorn social_video_formatter.main:app --host 0.0.0.0 --port ${PORT:-8080}"]
