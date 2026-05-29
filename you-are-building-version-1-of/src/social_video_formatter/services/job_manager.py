@@ -168,7 +168,7 @@ class JobManager:
                             duration_seconds=source_metadata.get("duration_seconds"),
                             width=int(preset["resolution"].split("x")[0]),
                             height=int(preset["resolution"].split("x")[1]),
-                            file_size_mb=10.0,
+                            file_size_mb=round(out_path.stat().st_size / (1024 * 1024), 2),
                             status="completed",
                         )
                         db.add(row)
