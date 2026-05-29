@@ -104,6 +104,21 @@ class JobManager:
     def process_job(self, job_id: str, platforms: list[str] | None = None, webhook_url: str | None = None) -> None:
         with SessionLocal() as db:
             job = db.get(Job, job_id)
+            if not job and self.firestore:
+                # Worker container has a fresh SQLite — rebuild the job from Firestore
+                fs_data = self.firestore.get_job(job_id)
+                if fs_data:
+                    job = Job(
+                        id=job_id,
+                        source_file_name=fs_data.get("source_file_name", f"{job_id}.mp4"),
+                        source_drive_file_id=fs_data.get("source_drive_file_id", ""),
+                        status=fs_data.get("status", "pending"),
+                        subtitle_mode=fs_data.get("subtitle_mode", "auto"),
+                    )
+                    db.add(job)
+                    db.commit()
+                    db.refresh(job)
+                    logger.info("Restored job %s from Firestore into local SQLite", job_id)
             if not job:
                 raise ValueError("Job not found")
 
