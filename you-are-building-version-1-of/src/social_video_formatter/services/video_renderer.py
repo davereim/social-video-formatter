@@ -8,10 +8,10 @@ logger = get_logger("video_renderer")
 
 
 class VideoRenderer:
-    # Cap the source resolution fed into each platform render.
-    # Encoding from 4K is ~4x slower than from 1080p for no quality benefit on social platforms.
-    _MAX_SOURCE_WIDTH = 1920
-    _MAX_SOURCE_HEIGHT = 1080
+    # Cap source to 1920×1920 bounding box before each platform render.
+    # Encoding 4K pixels that will be cropped/scaled down anyway wastes CPU time.
+    # 1920 covers all platform targets (widest is 1920×1080, tallest is 1080×1920).
+    _MAX_SOURCE_DIM = 1920
 
     def render(self, source_video: Path, output_path: Path, preset: dict, subtitle_file: Path | None = None) -> Path:
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -34,11 +34,11 @@ class VideoRenderer:
         return output_path
 
     def _build_vf(self, tw: int, th: int, subtitle_file: Path | None) -> str:
-        # Downscale source if it exceeds the cap before doing the crop/scale for the platform.
-        # This avoids encoding 4K pixels that will be discarded anyway.
+        # Pre-scale to 1920×1920 bounding box, then crop/scale to platform target.
+        d = self._MAX_SOURCE_DIM
         parts = [
-            f"scale='min(iw,{self._MAX_SOURCE_WIDTH})':'min(ih,{self._MAX_SOURCE_HEIGHT})':"
-            f"force_original_aspect_ratio=decrease,scale={tw}:{th}:force_original_aspect_ratio=increase,crop={tw}:{th}"
+            f"scale='min(iw,{d})':'min(ih,{d})':force_original_aspect_ratio=decrease,"
+            f"scale={tw}:{th}:force_original_aspect_ratio=increase,crop={tw}:{th}"
         ]
         if subtitle_file and subtitle_file.exists():
             # Escape colons in path for FFmpeg filter syntax
